@@ -1,0 +1,27 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# media and outputs
+outputs/
+.coldopen_cache/
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.m4a
+*.mp3
+*.wav
+*.ass
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+build/
+dist/
+.streamlit/secrets.toml

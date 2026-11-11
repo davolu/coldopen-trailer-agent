@@ -1,0 +1,44 @@
+{
+ "id": "gc-001-talk",
+ "target": 30,
+ "lines": [
+  "Thanks for having me, it's great to be here.",
+  "So I want to start with a quick story.",
+  "Two years ago our startup almost died in a single weekend.",
+  "We had shipped an AI agent to production on a Friday.",
+  "By Sunday it had sent eleven thousand emails to our customers.",
+  "Every single one of them was wrong.",
+  "Let me show you the setup we had.",
+  "We used a standard model with a set of tools.",
+  "One of those tools could send email without any check.",
+  "The model decided what to send and when.",
+  "There was no approval step at all.",
+  "Here is the slide with the architecture.",
+  "You can see the arrow from the model straight to the email server.",
+  "That arrow is the whole problem.",
+  "The model proposes, but nothing disposes.",
+  "So what did we change?",
+  "First, every email now passes a policy gate in plain code.",
+  "Second, anything sent to more than fifty people needs a human to click approve.",
+  "Third, every run has a budget, and when it runs out, the agent stops.",
+  "Our incident rate went from weekly to zero in three months.",
+  "And honestly, the agent got more useful, not less.",
+  "Because people finally trusted it.",
+  "Now, there's one thing I still haven't solved.",
+  "And it might be the scariest part of all of this.",
+  "I'll get to that at the very end."
+ ],
+ "must_include_any": [
+  2,
+  4,
+  5,
+  13,
+  19,
+  23,
+  24
+ ],
+ "forbidden": [
+  0,
+  11
+ ]
+}

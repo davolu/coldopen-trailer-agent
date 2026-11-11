@@ -1,0 +1,40 @@
+{
+ "id": "gc-004-housekeeping",
+ "target": 30,
+ "lines": [
+  "Hi guys, welcome back to the channel.",
+  "Before we start, please like and subscribe.",
+  "And hit the bell so you don't miss the next video.",
+  "Okay, so today is about saving money on groceries.",
+  "Last month I fed a family of four on one hundred and twenty dollars.",
+  "People in my comments said that was impossible.",
+  "So I filmed every single receipt.",
+  "The biggest trick is something your grandmother already knew.",
+  "You plan meals around what is on sale, not what you crave.",
+  "That one change cut my bill almost in half.",
+  "The second trick sounds strange.",
+  "I never shop when I'm hungry, and I mean never.",
+  "Studies say hungry shoppers spend way more.",
+  "And the third trick is the one that got me in trouble with my husband.",
+  "I'll tell you about that in a minute.",
+  "Don't forget to check the link in the description.",
+  "And leave a comment with your best tip.",
+  "See you in the next one."
+ ],
+ "must_include_any": [
+  4,
+  5,
+  7,
+  9,
+  13,
+  14
+ ],
+ "forbidden": [
+  0,
+  1,
+  2,
+  15,
+  16,
+  17
+ ]
+}

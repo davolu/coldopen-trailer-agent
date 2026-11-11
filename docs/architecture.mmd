@@ -1,0 +1,61 @@
+flowchart TB
+    classDef actor fill:#B3E65F,stroke:#6E9A24,color:#2F440B
+    classDef interface fill:#B3E65F,stroke:#6E9A24,color:#2F440B
+    classDef orchestrator fill:#9CE6FF,stroke:#2C97BB,color:#1C4657
+    classDef agent fill:#B8ACFB,stroke:#8A7BE0,color:#231266
+    classDef guardrail fill:#FFB575,stroke:#CC7830,color:#542700
+    classDef human fill:#FD9AE7,stroke:#D756BA,color:#511341
+    classDef tool fill:#FFE86D,stroke:#A28E26,color:#574900
+    classDef data fill:#81E7DE,stroke:#259D92,color:#0E4343
+    classDef external fill:#DDDDD8,stroke:#8A8A7E,color:#434339
+    classDef observability fill:#BDD1B9,stroke:#81917D,color:#2C3C29
+    subgraph L0["Users and channels (Untrusted input)"]
+        creator(["Creator<br/><small>YouTube URL or video file</small>"]):::actor
+    end
+    subgraph L1["Edge and input guard (Validated request)"]
+        ui["Streamlit UI + CLI<br/><small>typed TrailerRequest, job_id</small>"]:::interface
+        in_guard{{"Input guard<br/><small>allowlist, max minutes</small>"}}:::guardrail
+    end
+    subgraph L2["Orchestration (Code decides, model proposes)"]
+        miner(["Moment miner (Claude)<br/><small>structured scores, proposes</small>"]):::agent
+        pipeline["ColdOpen pipeline<br/><small>staged, checkpointed, budgets</small>"]:::orchestrator
+        sequencer["Tension sequencer<br/><small>deterministic order + fit</small>"]:::orchestrator
+    end
+    subgraph L3["Policy and human approval (Deny by default)"]
+        verifier{{"Moment verifier<br/><small>real spans, snap</small>"}}:::guardrail
+        review(["Human review<br/><small>approve / edit moment list</small>"]):::human
+        gate{{"Render gate<br/><small>approval digest</small>"}}:::guardrail
+        budget{{"Budget guard<br/><small>tokens, $, minutes</small>"}}:::guardrail
+    end
+    subgraph L4["Tools (Narrow, argv only, no shell)"]
+        ingest["Ingest (yt-dlp / file)<br/><small>read-only download</small>"]:::tool
+        transcribe["Transcriber (Whisper)<br/><small>word-level timestamps</small>"]:::tool
+        render["ffmpeg renderer<br/><small>fades, captions, 16:9 + 9:16</small>"]:::tool
+        probe{{"Output check (ffprobe)<br/><small>duration, streams</small>"}}:::guardrail
+    end
+    subgraph L5["Data and state (Local job directory)"]
+        cache[("Media + transcript cache<br/><small>keyed by source hash</small>")]:::data
+        jobstore[("Job checkpoints<br/><small>moments.json, approval.json</small>")]:::data
+        outputs[("Trailer outputs<br/><small>mp4 + manifest</small>")]:::data
+    end
+    subgraph L6["Observability and evals (Every stage emits events)"]
+        trace["Run log + cost ledger<br/><small>redacted, per stage</small>"]:::observability
+        evals["Eval script + gate<br/><small>golden transcripts, PROMOTE/HOLD</small>"]:::observability
+    end
+    creator -->|URL / upload| ui
+    ui -->|TrailerRequest| in_guard
+    in_guard -->|validated job| pipeline
+    pipeline -.->|transcript = data| miner
+    miner ==>|candidate moments| verifier
+    pipeline ==>|verified moments| sequencer
+    sequencer ==>|proposed cut| gate
+    pipeline -.->|save, then pause| review
+    review -.->|approval.json| jobstore
+    gate -.->|approved exact list| render
+    render -->|mp4 files| probe
+    render -->|write to job dir| outputs
+    budget ==>|max minutes| ingest
+    ingest -.->|media (untrusted)| cache
+    transcribe -->|words + timings| cache
+    cache -.->|stage events| trace
+    outputs -.->|manifests| evals
