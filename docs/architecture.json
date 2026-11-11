@@ -1,0 +1,102 @@
+{
+  "title": "ColdOpen: AI Trailer Agent",
+  "summary": "Hybrid workflow: code ingests, transcribes, verifies, sequences and renders; Claude only proposes scored moments. Nothing renders until a human approves the exact moment list.",
+  "autonomy": "Level: hybrid workflow (Ch1, Ch24). The model proposes candidate moments and scores; code verifies timestamps, snaps to sentences, enforces length and budgets, and renders only an approved, digest-matched list. It never publishes anywhere.",
+  "layers": [
+    {"name": "Users and channels", "trust": "Untrusted input", "boundary_below": "source allowlist + size/duration limits", "nodes": [
+      {"id": "creator", "label": "Creator", "kind": "actor", "note": "YouTube URL or video file", "col": 2}
+    ]},
+    {"name": "Edge and input guard", "trust": "Validated request", "nodes": [
+      {"id": "ui", "label": "Streamlit UI + CLI", "kind": "interface", "note": "typed TrailerRequest, job_id", "col": 2},
+      {"id": "in_guard", "label": "Input guard", "kind": "guardrail", "note": "allowlist, max minutes", "col": 3}
+    ]},
+    {"name": "Orchestration", "trust": "Code decides, model proposes", "nodes": [
+      {"id": "miner", "label": "Moment miner (Claude)", "kind": "agent", "note": "structured scores, proposes", "col": 1},
+      {"id": "pipeline", "label": "ColdOpen pipeline", "kind": "orchestrator", "note": "staged, checkpointed, budgets", "col": 2},
+      {"id": "sequencer", "label": "Tension sequencer", "kind": "orchestrator", "note": "deterministic order + fit", "col": 3}
+    ]},
+    {"name": "Policy and human approval", "trust": "Deny by default", "boundary_below": "only approved, digest-matched moments render", "nodes": [
+      {"id": "verifier", "label": "Moment verifier", "kind": "guardrail", "note": "real spans, snap", "col": 1},
+      {"id": "review", "label": "Human review", "kind": "human", "note": "approve / edit moment list", "col": 2},
+      {"id": "gate", "label": "Render gate", "kind": "guardrail", "note": "approval digest", "col": 3},
+      {"id": "budget", "label": "Budget guard", "kind": "guardrail", "note": "tokens, $, minutes", "col": 0}
+    ]},
+    {"name": "Tools", "trust": "Narrow, argv only, no shell", "nodes": [
+      {"id": "ingest", "label": "Ingest (yt-dlp / file)", "kind": "tool", "note": "read-only download", "col": 0},
+      {"id": "transcribe", "label": "Transcriber (Whisper)", "kind": "tool", "note": "word-level timestamps", "col": 1},
+      {"id": "render", "label": "ffmpeg renderer", "kind": "tool", "note": "fades, captions, 16:9 + 9:16", "col": 3},
+      {"id": "probe", "label": "Output check (ffprobe)", "kind": "guardrail", "note": "duration, streams", "col": 4}
+    ]},
+    {"name": "Data and state", "trust": "Local job directory", "nodes": [
+      {"id": "cache", "label": "Media + transcript cache", "kind": "data", "note": "keyed by source hash", "col": 1},
+      {"id": "jobstore", "label": "Job checkpoints", "kind": "data", "note": "moments.json, approval.json", "col": 2},
+      {"id": "outputs", "label": "Trailer outputs", "kind": "data", "note": "mp4 + manifest", "col": 3}
+    ]},
+    {"name": "Observability and evals", "trust": "Every stage emits events", "nodes": [
+      {"id": "trace", "label": "Run log + cost ledger", "kind": "observability", "note": "redacted, per stage", "col": 1},
+      {"id": "evals", "label": "Eval script + gate", "kind": "observability", "note": "golden transcripts, PROMOTE/HOLD", "col": 3}
+    ]}
+  ],
+  "edges": [
+    {"from": "creator", "to": "ui", "label": "URL / upload", "kind": "data"},
+    {"from": "ui", "to": "in_guard", "label": "TrailerRequest", "kind": "data"},
+    {"from": "in_guard", "to": "pipeline", "label": "validated job", "kind": "data"},
+    {"from": "pipeline", "to": "miner", "label": "transcript = data", "kind": "untrusted"},
+    {"from": "miner", "to": "verifier", "label": "candidate moments", "kind": "control"},
+    {"from": "pipeline", "to": "sequencer", "label": "verified moments", "kind": "control"},
+    {"from": "sequencer", "to": "gate", "label": "proposed cut", "kind": "control"},
+    {"from": "pipeline", "to": "review", "label": "save, then pause", "kind": "approval"},
+    {"from": "review", "to": "jobstore", "label": "approval.json", "kind": "approval"},
+    {"from": "gate", "to": "render", "label": "approved exact list", "kind": "approval"},
+    {"from": "render", "to": "probe", "label": "mp4 files", "kind": "data"},
+    {"from": "render", "to": "outputs", "label": "write to job dir", "kind": "data"},
+    {"from": "budget", "to": "ingest", "label": "max minutes", "kind": "control"},
+    {"from": "ingest", "to": "cache", "label": "media (untrusted)", "kind": "untrusted"},
+    {"from": "transcribe", "to": "cache", "label": "words + timings", "kind": "data"},
+    {"from": "cache", "to": "trace", "label": "stage events", "kind": "telemetry"},
+    {"from": "outputs", "to": "evals", "label": "manifests", "kind": "telemetry"}
+  ],
+  "key_decisions": [
+    "Hybrid workflow, not a free agent: steps are known, so code owns them (Ch24)",
+    "One structured Claude call proposes moments; code verifies every timestamp (Ch8, Ch13)",
+    "Human approves the exact moment list; render checks its digest (Ch49)",
+    "One agent is enough: no scout/editor/critic crew (Ch31)",
+    "Transcript and video content are data, never instructions (Ch47)",
+    "Budgets on minutes, tokens and dollars with named stop reasons (Ch14, Ch52)"
+  ],
+  "rationale": [
+    "Workflow vs agent: ingest, transcribe, select, render is an enumerable path, so a plain-Python staged workflow owns it; the only judgement call (which moments grip) is a single structured model step (Ch24, Ch21).",
+    "Reasoning: one structured-output call plus a deterministic verifier (timestamps must exist in the transcript, clips snapped to sentence ends, length within budget) beats a model critic (Ch13, Ch8).",
+    "Single agent: no measured reason (isolation, specialization, parallelism, ownership) to split; long transcripts are chunked map-style inside the same step (Ch31).",
+    "Tools: narrow functions run as argv lists without a shell; renderer writes only inside the job directory; no MCP needed in v1 because nothing is shared across hosts (Ch11, Ch39).",
+    "State: no long-term memory. Each job has checkpoints (media, transcript, moments, approval, manifest) so review can pause and resume without re-paying for transcription (Ch19, Ch23).",
+    "HITL: the human decision sits at the boundary where cost and output are created (render); approval is bound to a SHA-256 digest of the exact moment list (Ch49)."
+  ],
+  "trust_boundaries": [
+    "Creator to pipeline: URL host allowlist (youtube.com, youtu.be) or an existing local video file; max source minutes and file size (Ch51).",
+    "Transcript to model: wrapped as untrusted data in the user turn, never in the system prompt; spoken instructions are ignored (Ch9, Ch47).",
+    "Model to render: verifier rejects invented timestamps; render gate requires approval.json whose digest matches the moment list (Ch48, Ch49).",
+    "Process to OS: ffmpeg and yt-dlp called with argument lists, no shell, outputs confined to the job directory; keys only from environment (Ch39, Ch5)."
+  ],
+  "failure_handling": [
+    "Each external call (yt-dlp, Whisper, Claude, ffmpeg) has a timeout and returns a typed error; only transient errors retry, max 2 with backoff (Ch14, Ch53).",
+    "Stages are idempotent: cached by source hash, a re-run skips finished stages (Ch14).",
+    "Named stop reasons: DONE, AWAITING_APPROVAL, REJECTED_INPUT, BUDGET_EXCEEDED, NO_GOOD_MOMENTS, RENDER_FAILED (Ch14).",
+    "If the model output fails schema validation it is retried once with the error; then the run stops with NO_GOOD_MOMENTS rather than guessing (Ch8)."
+  ],
+  "hitl": [
+    "Before render: creator sees ranked moments with scores, text, timestamps and reasons, ticks/edits them, and approves the exact list (Ch49).",
+    "--auto-approve is an explicit, logged opt-in that the creator accepts; it never publishes or uploads anything (Ch49, Ch56)."
+  ],
+  "evals": [
+    "Golden transcripts with stable case IDs: talk, interview, short video, no-hook content, transcript with injected instructions (Ch42).",
+    "Deterministic checks: clips inside source, sentence-snapped, no overlap, total length within +-10%, 3-6 clips, injection ignored (Ch41, Ch44).",
+    "Release gate PROMOTE/HOLD with a zero-tolerance floor on invented timestamps and unapproved renders (Ch45)."
+  ],
+  "risks": [
+    "Clips out of context misrepresent the speaker: standalone-clarity score plus human review; owner: creator (Ch46).",
+    "Copyright on third-party videos: v1 targets the creator's own content; owner: creator (Ch59).",
+    "Runaway cost on very long videos: max-minutes and dollar budget guard; owner: maintainer (Ch52)."
+  ],
+  "non_goals": ["Auto-publishing to YouTube or socials", "Editing the full video", "Music generation"]
+}

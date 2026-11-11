@@ -1,0 +1,48 @@
+{
+ "id": "gc-002-interview",
+ "target": 30,
+ "lines": [
+  "Welcome back to the podcast.",
+  "Today my guest is a nurse who became a software engineer at forty five.",
+  "Thanks so much for coming on.",
+  "Thank you, I'm a little nervous, to be honest.",
+  "So take us back, what made you switch careers?",
+  "I was on a night shift, and a patient's chart was wrong.",
+  "The system had copied an old allergy into the wrong record.",
+  "We caught it with about ten minutes to spare.",
+  "I went home and couldn't sleep.",
+  "I kept thinking, somebody wrote that code, and nobody checked it.",
+  "So I signed up for a coding class the next morning.",
+  "My kids thought I'd lost my mind.",
+  "My daughter actually helped me with my first Python homework.",
+  "That's beautiful.",
+  "What was the hardest part?",
+  "Honestly, believing I was allowed to be there.",
+  "Everyone in the bootcamp was half my age.",
+  "On day three I cried in the parking lot.",
+  "And then on day four I came back.",
+  "Now I build the safety checks for hospital software.",
+  "The exact kind of check that would have caught that chart.",
+  "If you're listening and you think it's too late for you, it isn't.",
+  "Before we go, where can people find you?",
+  "I'm on LinkedIn, just search my name."
+ ],
+ "must_include_any": [
+  5,
+  6,
+  7,
+  9,
+  15,
+  17,
+  18,
+  19,
+  20,
+  21
+ ],
+ "forbidden": [
+  0,
+  2,
+  22,
+  23
+ ]
+}
